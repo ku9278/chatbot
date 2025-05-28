@@ -35,7 +35,7 @@ class Chatbot():
 
     def summarize_history(self):
         query = "지금까지의 대화를 요약해줘"
-        summary = self.get_response(query)
+        summary = self.get_answer(query)
         self.messages = [{"role": "system", "content": "이전 대화 요약: " + summary}]
         self.tokens = 0
 
