@@ -1,7 +1,6 @@
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
-from utils import *
 
 class Chatbot():
     MAX_TOKENS_HISTORY = 3000
@@ -15,10 +14,9 @@ class Chatbot():
         self.tokens = 0 # 저장된 대화의 토큰
 
     
-    def get_response(self, query: str) -> str:
-        # 질문 저장 및 토큰 합산
+    def get_answer(self, query: str) -> str:
+        # 질문 저장
         self.messages.append({"role": "user", "content": query})
-        self.tokens += get_token_Gpt4oMini([self.messages[-1]])
 
         response = self.client.chat.completions.create(
             model=self.model,
@@ -28,9 +26,9 @@ class Chatbot():
         )
         answer = response.choices[0].message.content
 
-        # 답변 저장 및 토큰 합산
+        # 답변 저장 및 토큰 계산
         self.messages.append({"role": "assistant", "content": answer})
-        self.tokens += get_token_Gpt4oMini([self.messages[-1]])
+        self.tokens = response.usage.total_tokens
         
         return answer
 
@@ -39,6 +37,7 @@ class Chatbot():
         query = "지금까지의 대화를 요약해줘"
         summary = self.get_response(query)
         self.messages = [{"role": "system", "content": "이전 대화 요약: " + summary}]
+        self.tokens = 0
 
 
     def start_chat(self):
@@ -46,7 +45,7 @@ class Chatbot():
         while(True):
             query = input("입력: ")
             if query == "0": break
-            print(self.get_response(query))
+            print(self.get_answer(query))
 
             # 저장된 대화의 토큰이 일정 수준을 넘으면 대화를 요약한다
             if (self.tokens > self.MAX_TOKENS_HISTORY): self.summarize_history()
