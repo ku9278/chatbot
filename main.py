@@ -1,16 +1,27 @@
+import os
 from dotenv import load_dotenv
 from openai import OpenAI
+import speech_recognition as sr
+from playsound import playsound
 
 class Chatbot():
     MAX_TOKENS_HISTORY = 3000
 
-    def __init__(self, model = "gpt-4o-mini", max_tokens = 1000, temperature = 1):
+    def __init__(self, NLP_model = "gpt-4o-mini", max_tokens = 1000, temperature = 1, TTS_model = "tts-1", voice = "alloy"):
+        # NLP - openai api
         self.client = OpenAI()
-        self.model = model
-        self.messages = [] # 연속적인 대화를 위한 대화 저장
+        self.NLP_model = NLP_model
+        self.messages = [{"role": "system", "content": "너의 대답은 음성으로 사용자에게 전달된다"}]
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.tokens = 0 # 저장된 대화의 토큰
+
+        # STT
+        self.speech_recognizer = sr.Recognizer()
+
+        # TTS - openai api
+        self.TTS_model = TTS_model
+        self.voice = voice
 
     
     def get_answer(self, query: str, summarize = False) -> str:
@@ -18,10 +29,10 @@ class Chatbot():
         self.messages.append({"role": "user", "content": query})
 
         response = self.client.chat.completions.create(
-            model=self.model,
-            messages=self.messages,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature
+            model = self.NLP_model,
+            messages = self.messages,
+            max_tokens = self.max_tokens,
+            temperature = self.temperature
         )
         answer = response.choices[0].message.content
 
@@ -41,17 +52,60 @@ class Chatbot():
         self.get_answer(query, summarize = True)
         # get_answer에서 self.messages와 self.tokens가 업데이트 된다.
 
+    
+    def speech_recognize(self) -> str:
+        # 음성 입력
+        with sr.Microphone() as source:
+            audio = self.speech_recognizer.listen(source)
+        
+        # 음성을 텍스트로 변환
+        text = self.speech_recognizer.recognize_google(audio, language='ko-KR')
+
+        return text
+
+    
+    def speak_answer(self, answer: str):
+        speech_file_path = "./tmp/answer.mp3"
+
+        response = self.client.audio.speech.create(
+            model = self.TTS_model,
+            voice = self.voice,
+            input = answer
+        )
+
+        # mp3 파일 생성 (stream_to_file 안됨)
+        with open(speech_file_path, "wb") as f:
+            for chunk in response.iter_bytes():
+                f.write(chunk)
+
+        # mp3 파일 재생
+        playsound(speech_file_path)
+        
+        # mp3 파일 삭제
+        if os.path.exists(speech_file_path):
+            os.remove(speech_file_path)
+
 
     def start_chat(self):
         print("--대화 시작--")
+        print("음성 입력: Enter / 종료: 0 ")
+
         while(True):
-            query = input("입력: ")
-            if query == "0": break
-            print(self.get_answer(query))
+            cmd = input("입력: ")
+            if cmd == "0": break
+            
+            # 음성 입력 받기
+            print("\033[F음성 인식중...")
+            query = self.speech_recognize()
+            # 질문 제공 후 답변 받기
+            answer = self.get_answer(query)
+            # 답변을 음성으로 출력
+            print("\033[F대답 중...    ")
+            self.speak_answer(answer)
 
             # 저장된 대화의 토큰이 일정 수준을 넘으면 대화를 요약한다
             if (self.tokens > self.MAX_TOKENS_HISTORY): self.summarize_history()
-
+        
         self.end_chat()
 
 
