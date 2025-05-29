@@ -24,7 +24,7 @@ class Chatbot():
         self.voice = voice
 
     
-    def get_answer(self, query: str, summarize = False) -> str:
+    def get_answer(self, query: str) -> str:
         # 질문 저장
         self.messages.append({"role": "user", "content": query})
 
@@ -37,20 +37,18 @@ class Chatbot():
         answer = response.choices[0].message.content
 
         # 답변 저장 및 토큰 계산
-        if summarize:
-            self.messages = [{"role": "system", "content": "이전 대화 요약: " + answer}]
-            self.tokens = response.usage.completion_tokens
-        else:
-            self.messages.append({"role": "assistant", "content": answer})
-            self.tokens = response.usage.total_tokens
+        self.messages.append({"role": "assistant", "content": answer})
+        self.tokens = response.usage.total_tokens
         
         return answer
 
 
     def summarize_history(self):
         query = "지금까지의 대화를 요약해줘"
-        self.get_answer(query, summarize = True)
-        # get_answer에서 self.messages와 self.tokens가 업데이트 된다.
+        summary = self.get_answer(query)
+        self.messages = [{"role": "system", "content": "너의 대답은 음성으로 사용자에게 전달된다"}, 
+                         {"role": "system", "content": "이전 대화 요약: " + summary}]
+        self.tokens = 0
 
     
     def speech_recognize(self) -> str:
