@@ -54,17 +54,28 @@ class Chatbot():
 
     
     def speech_recognize(self) -> str:
-        # 음성 입력
-        with sr.Microphone() as source:
-            audio = self.speech_recognizer.listen(source)
-        
-        # 음성을 텍스트로 변환
-        text = self.speech_recognizer.recognize_google(audio, language='ko-KR')
-
-        return text
+        while True:
+            # 음성 입력
+            print("\033[F음성 인식중...")
+            with sr.Microphone() as source:
+                audio = self.speech_recognizer.listen(source)
+            
+            # 음성을 텍스트로 변환
+            try:
+                text = self.speech_recognizer.recognize_google(audio, language='ko-KR')
+                return text
+            except sr.UnknownValueError:
+                print("\033[F음성을 인식하지 못했습니다. 다시 시도하세요.")
+                print("")
+                continue
+            except sr.RequestError as e:
+                print("\033[FGoogle Web Speech API 서비스에 문제가 발생했습니다.")
+                print("프로그램을 종료합니다.")
+                exit(1)
 
     
     def speak_answer(self, answer: str):
+        print("\033[F대답 중...    ")
         speech_file_path = "./tmp/answer.mp3"
 
         response = self.client.audio.speech.create(
@@ -80,6 +91,7 @@ class Chatbot():
 
         # mp3 파일 재생
         playsound(speech_file_path)
+        print("\033[F대답 완료     ")
         
         # mp3 파일 삭제
         if os.path.exists(speech_file_path):
@@ -95,12 +107,10 @@ class Chatbot():
             if cmd == "0": break
             
             # 음성 입력 받기
-            print("\033[F음성 인식중...")
             query = self.speech_recognize()
             # 질문 제공 후 답변 받기
             answer = self.get_answer(query)
             # 답변을 음성으로 출력
-            print("\033[F대답 중...    ")
             self.speak_answer(answer)
 
             # 저장된 대화의 토큰이 일정 수준을 넘으면 대화를 요약한다
