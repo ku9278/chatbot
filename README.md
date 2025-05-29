@@ -47,6 +47,6 @@
 ## 참고
 
 - OpenAI GPT 및 TTS API 사용
-- 자연어 처리: [openai](https://github.com/openai/openai-python)
+- 자연어 처리: [openai](https://pypi.org/project/openai/)
 - 음성 인식: [SpeechRecognition](https://pypi.org/project/SpeechRecognition/)
 - 음성 재생: [playsound](https://pypi.org/project/playsound/)
